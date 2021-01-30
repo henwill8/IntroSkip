@@ -1,0 +1,84 @@
+{
+  "config": {
+    "sharedDir": "shared",
+    "dependenciesDir": "extern",
+    "info": {
+      "name": "IntroSkip",
+      "id": "IntroSkip",
+      "version": "0.2.0",
+      "url": null,
+      "additionalData": {}
+    },
+    "dependencies": [
+      {
+        "id": "beatsaber-hook",
+        "versionRange": "*",
+        "additionalData": {
+          "extraFiles": [
+            "src/inline-hook"
+          ]
+        }
+      },
+      {
+        "id": "questui",
+        "versionRange": "*",
+        "additionalData": {}
+      }
+    ],
+    "additionalData": {}
+  },
+  "restoredDependencies": [
+    {
+      "dependency": {
+        "id": "beatsaber-hook",
+        "versionRange": "*",
+        "additionalData": {
+          "extraFiles": [
+            "src/inline-hook"
+          ]
+        }
+      },
+      "version": "1.0.12"
+    },
+    {
+      "dependency": {
+        "id": "modloader",
+        "versionRange": "^1.0.0",
+        "additionalData": {}
+      },
+      "version": "1.0.4"
+    },
+    {
+      "dependency": {
+        "id": "libil2cpp",
+        "versionRange": "0.1.2",
+        "additionalData": {}
+      },
+      "version": "0.1.2"
+    },
+    {
+      "dependency": {
+        "id": "questui",
+        "versionRange": "*",
+        "additionalData": {}
+      },
+      "version": "0.4.3"
+    },
+    {
+      "dependency": {
+        "id": "codegen",
+        "versionRange": "^0.6.2",
+        "additionalData": {}
+      },
+      "version": "0.6.2"
+    },
+    {
+      "dependency": {
+        "id": "custom-types",
+        "versionRange": "^0.4.4",
+        "additionalData": {}
+      },
+      "version": "0.4.4"
+    }
+  ]
+}

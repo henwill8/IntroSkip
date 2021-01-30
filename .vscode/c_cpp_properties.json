@@ -1,0 +1,25 @@
+{
+  "configurations": [
+    {
+      "defines": [
+        "MOD_ID=\"IntroSkip\"",
+        "VERSION=\"0.2.0\"",
+        "__GNUC__",
+        "__aarch64__",
+        "ID=\"IntroSkip\""
+      ],
+      "includePath": [
+        "${workspaceFolder}/**",
+        "c:/Program Files/Unity/Hub/Editor/2019.3.2f1/Editor/Data/il2cpp/libil2cpp",
+        "c:/Users/henwi/Desktop/ModdingBeatSaber/android-ndk-r20b/**",
+        "${workspaceFolder}/shared",
+        "${workspaceFolder}/extern"
+      ],
+      "name": "Quest",
+      "cStandard": "c11",
+      "cppStandard": "c++20",
+      "intelliSenseMode": "clang-x64"
+    }
+  ],
+  "version": 4
+}
