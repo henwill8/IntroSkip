@@ -148,7 +148,7 @@ void onNoteSpawn(Il2CppObject* noteData) {
 
     // log("Time to next note is "+std::to_string(timeToNextNote));
 
-    if(timeToNextNote > minSkipTime && timeToNextNote < songLength && getConfig().config["Are Middle Skips Enabled"].GetBool()) {
+    if(timeToNextNote > minSkipTime && timeToNextNote < songLength && getConfig().config["Are Middle Skips Enabled"].GetBool() && !skipReady) {
         skipReady = true;
         skipTime = songTime + timeToNextNote - timeBeforeNoteToSkipTo;
         log("Skip is ready, skip time is %f", skipTime);
@@ -184,7 +184,7 @@ MAKE_HOOK_OFFSETLESS(SongUpdate, void, Il2CppObject* self) {
                 }
             }
         }
-        log("First note time is %f, last note time is %f", firstNoteTime, lastNoteTime);\
+        log("First note time is %f, last note time is %f", firstNoteTime, lastNoteTime);
         gotTimes = true;
     }
 
@@ -270,6 +270,8 @@ MAKE_HOOK_OFFSETLESS(SongStart, void, Il2CppObject* self) {
     gotTimes = false;
     scoreText = nullptr;
     inPauseMenu = false;
+    skipReady = false;
+    skipTime = 0;
     
     timeBeforeNoteToSkipTo = std::max(0.0f, getConfig().config["How Long Before The Notes To Skip To"].GetFloat());
     timeToHold = std::max(0.0f, getConfig().config["Time Held To Skip"].GetFloat());
