@@ -4,43 +4,11 @@ using namespace QuestUI;
 using namespace UnityEngine::UI;
 using namespace UnityEngine;
 
-DEFINE_CLASS(IntroSkip::UIController);
+DEFINE_TYPE(IntroSkip, UIController);
 
-void toggleMiddleSkips() {
-    getConfig().config["Are Middle Skips Enabled"].SetBool(!getConfig().config["Are Middle Skips Enabled"].GetBool());
-}
+#define CreateIncrementMacro(parent, floatConfigValue, name, decimals, increment, hasMin, hasMax, minValue, maxValue) QuestUI::BeatSaberUI::CreateIncrementSetting(parent, name, decimals, increment, floatConfigValue.GetFloat(), hasMin, hasMax, minValue, maxValue, UnityEngine::Vector2{}, [this](float value) { floatConfigValue.SetFloat(value); })
 
-void toggleIntroSkips() {
-    getConfig().config["Are Intro Skips Enabled"].SetBool(!getConfig().config["Are Intro Skips Enabled"].GetBool());
-}
-
-void toggleOutroSkips() {
-    getConfig().config["Are Outro Skips Enabled"].SetBool(!getConfig().config["Are Outro Skips Enabled"].GetBool());
-}
-
-void changeTextSize(float newValue) {
-    getConfig().config["Text Size"].SetInt(newValue);
-}
-
-void changeTextXOffset(float newValue) {
-    getConfig().config["Text X Offset"].SetInt(newValue);
-}
-
-void changeTextYOffset(float newValue) {
-    getConfig().config["Text Y Offset"].SetInt(newValue);
-}
-
-void changeHoldTime(float newValue) {
-    getConfig().config["Time Held To Skip"].SetFloat(newValue);
-}
-
-void changeMinimumSkipTime(float newValue) {
-    getConfig().config["Minimum Time Needed To Be Able To Skip"].SetFloat(newValue);
-}
-
-void changeTimeBefore(float newValue) {
-    getConfig().config["How Long Before The Notes To Skip To"].SetFloat(newValue);
-}
+#define CreateToggleMacro(parent, boolConfigValue, name) QuestUI::BeatSaberUI::CreateToggle(parent, name, boolConfigValue.GetBool(), [this](bool newValue) { boolConfigValue.SetBool(newValue);})
 
 void IntroSkip::UIController::DidActivate(bool firstActivation, bool addedToHierarchy, bool screenSystemEnabling) {
 	if(firstActivation)
@@ -70,97 +38,17 @@ void IntroSkip::UIController::DidActivate(bool firstActivation, bool addedToHier
 		Transform* Parent2 = layout2->get_transform();
 		Transform* Parent3 = layout3->get_transform();
 
-		Toggle* IntroSkipsToggle = BeatSaberUI::CreateToggle(
-            Parent1,
-            "Enable Intro Skips",
-            getConfig().config["Are Intro Skips Enabled"].GetBool(),
-            il2cpp_utils::MakeDelegate<UnityEngine::Events::UnityAction_1<bool>*>(classof(UnityEngine::Events::UnityAction_1<bool>*), this, toggleIntroSkips)
-        );
-		QuestUI::BeatSaberUI::AddHoverHint(IntroSkipsToggle->get_gameObject(), "Songs without notes during the intro will be skippable when enabled");
+		QuestUI::BeatSaberUI::AddHoverHint(CreateToggleMacro(Parent1, getConfig().config["Are Intro Skips Enabled"], "Enable Intro Skips")->get_gameObject(), "Songs without notes during the intro will be skippable when enabled");
+		QuestUI::BeatSaberUI::AddHoverHint(CreateToggleMacro(Parent1, getConfig().config["Are Middle Skips Enabled"], "Enable Middle Skips")->get_gameObject(), "Pauses in the middle of songs will be skippable when enabled");
+		QuestUI::BeatSaberUI::AddHoverHint(CreateToggleMacro(Parent1, getConfig().config["Are Outro Skips Enabled"], "Enable Outro Skips")->get_gameObject(), "Songs without notes during the outro will be skippable when enabled");
 
-		Toggle* SkipsToggle = BeatSaberUI::CreateToggle(
-            Parent1,
-            "Enable Middle Skips",
-            getConfig().config["Are Middle Skips Enabled"].GetBool(),
-            il2cpp_utils::MakeDelegate<UnityEngine::Events::UnityAction_1<bool>*>(classof(UnityEngine::Events::UnityAction_1<bool>*), this, toggleMiddleSkips)
-        );
-		QuestUI::BeatSaberUI::AddHoverHint(SkipsToggle->get_gameObject(), "Pauses in the middle of songs will be skippable when enabled");
+		QuestUI::BeatSaberUI::AddHoverHint(CreateIncrementMacro(Parent2, getConfig().config["Time Held To Skip"], "Hold Time", 1, 0.1f, true, true, 0, 5)->get_gameObject(), "Changes the amount of time you have to hold the triggers to skip a section, setting to 0 will cause automatic skipping");
+		QuestUI::BeatSaberUI::AddHoverHint(CreateIncrementMacro(Parent2, getConfig().config["Minimum Time Needed To Be Able To Skip"], "Minimum Skip Time", 1, 0.5f, true, true, 2.5f, 30)->get_gameObject(), "Changes the minimum pause length in a song needed to skip the section");
+		QuestUI::BeatSaberUI::AddHoverHint(CreateIncrementMacro(Parent2, getConfig().config["How Long Before Notes To Skip To"], "Before Notes Skip To Time", 1, 0.5f, true, true, 1, 10)->get_gameObject(), "Changes the time before the first notes to skip to");
 
-		Toggle* OutroSkipsToggle = BeatSaberUI::CreateToggle(
-            Parent1,
-            "Enable Outro Skips",
-            getConfig().config["Are Outro Skips Enabled"].GetBool(),
-            il2cpp_utils::MakeDelegate<UnityEngine::Events::UnityAction_1<bool>*>(classof(UnityEngine::Events::UnityAction_1<bool>*), this, toggleOutroSkips)
-        );
-		QuestUI::BeatSaberUI::AddHoverHint(OutroSkipsToggle->get_gameObject(), "Songs without notes during the outro will be skippable when enabled");
-
-        QuestUI::IncrementSetting* HoldTime = BeatSaberUI::CreateIncrementSetting(
-            Parent2,
-            "Hold Time",
-            1,
-            0.1f,
-            getConfig().config["Time Held To Skip"].GetFloat(),
-            0,
-            5,
-            il2cpp_utils::MakeDelegate<UnityEngine::Events::UnityAction_1<float>*>(classof(UnityEngine::Events::UnityAction_1<float>*), this, changeHoldTime)
-        );
-		QuestUI::BeatSaberUI::AddHoverHint(HoldTime->get_gameObject(), "Changes the amount of time you have to hold the triggers to skip a section, setting to 0 will cause automatic skipping");
-
-        QuestUI::IncrementSetting* MinimumSkipTime = BeatSaberUI::CreateIncrementSetting(
-            Parent2,
-            "Minimum Skip Time",
-            1,
-            0.5f,
-            getConfig().config["Minimum Time Needed To Be Able To Skip"].GetFloat(),
-            2.5f,
-            30,
-            il2cpp_utils::MakeDelegate<UnityEngine::Events::UnityAction_1<float>*>(classof(UnityEngine::Events::UnityAction_1<float>*), this, changeMinimumSkipTime)
-        );
-		QuestUI::BeatSaberUI::AddHoverHint(MinimumSkipTime->get_gameObject(), "Changes the minimum pause length in a song needed to skip the section");
-
-        QuestUI::IncrementSetting* TimeBefore = BeatSaberUI::CreateIncrementSetting(
-            Parent2,
-            "Before Notes Skip To Time",
-            1,
-            0.5f,
-            getConfig().config["How Long Before The Notes To Skip To"].GetFloat(),
-            1,
-            10,
-            il2cpp_utils::MakeDelegate<UnityEngine::Events::UnityAction_1<float>*>(classof(UnityEngine::Events::UnityAction_1<float>*), this, changeTimeBefore)
-        );
-		QuestUI::BeatSaberUI::AddHoverHint(TimeBefore->get_gameObject(), "Changes the time before the first notes to skip to");
-
-        QuestUI::IncrementSetting* TextSize = BeatSaberUI::CreateIncrementSetting(
-            Parent3,
-            "Text Size",
-            0,
-            1,
-            getConfig().config["Text Size"].GetInt(),
-            0,
-            40,
-            il2cpp_utils::MakeDelegate<UnityEngine::Events::UnityAction_1<float>*>(classof(UnityEngine::Events::UnityAction_1<float>*), this, changeTextSize)
-        );
-		QuestUI::BeatSaberUI::AddHoverHint(TextSize->get_gameObject(), "Changes the size of the text that shows when you can skip a section");
-        
-        QuestUI::IncrementSetting* TextXOffset = BeatSaberUI::CreateIncrementSetting(
-            Parent3,
-            "Text X Offset",
-            0,
-            1,
-            getConfig().config["Text X Offset"].GetInt(),
-            il2cpp_utils::MakeDelegate<UnityEngine::Events::UnityAction_1<float>*>(classof(UnityEngine::Events::UnityAction_1<float>*), this, changeTextXOffset)
-        );
-		QuestUI::BeatSaberUI::AddHoverHint(TextXOffset->get_gameObject(), "Changes the X position of the skip text");
-
-        QuestUI::IncrementSetting* TextYOffset = BeatSaberUI::CreateIncrementSetting(
-            Parent3,
-            "Text Y Offset",
-            0,
-            1,
-            getConfig().config["Text Y Offset"].GetInt(),
-            il2cpp_utils::MakeDelegate<UnityEngine::Events::UnityAction_1<float>*>(classof(UnityEngine::Events::UnityAction_1<float>*), this, changeTextYOffset)
-        );
-		QuestUI::BeatSaberUI::AddHoverHint(TextYOffset->get_gameObject(), "Changes the Y position of the skip text");
+		QuestUI::BeatSaberUI::AddHoverHint(CreateIncrementMacro(Parent3, getConfig().config["Text Size"], "Text Size", 0, 1, true, true, 0, 40)->get_gameObject(), "Changes the size of the text that shows when you can skip a section");
+		QuestUI::BeatSaberUI::AddHoverHint(CreateIncrementMacro(Parent3, getConfig().config["Text X Offset"], "Text X Offset", 0, 1, false, false, 0, 0)->get_gameObject(), "Changes the X position of the skip text");
+		QuestUI::BeatSaberUI::AddHoverHint(CreateIncrementMacro(Parent3, getConfig().config["Text Y Offset"], "Text Y Offset", 0, 1, false, false, 0, 0)->get_gameObject(), "Changes the Y position of the skip text");
     }
 }
 

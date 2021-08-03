@@ -1,16 +1,15 @@
 #include "../include/main.hpp"
 #include "../include/codegen.hpp"
 #include "../include/UI.hpp"
-// #include "../include/logging.hpp"
-#include "../extern/beatsaber-hook/shared/config/config-utils.hpp"
-#include "../extern/beatsaber-hook/shared/utils/utils.h"
-#include "../extern/beatsaber-hook/shared/utils/logging.hpp"
-#include "../extern/modloader/shared/modloader.hpp"
-#include "../extern/beatsaber-hook/shared/utils/typedefs.h"
-#include "../extern/beatsaber-hook/shared/utils/il2cpp-utils.hpp"
-#include "../extern/beatsaber-hook/shared/utils/il2cpp-functions.hpp"
-#include "../extern/beatsaber-hook/shared/config/rapidjson-utils.hpp"
-#include "../extern/beatsaber-hook/shared/config/config-utils.hpp"
+#include "beatsaber-hook/shared/utils/utils.h"
+#include "beatsaber-hook/shared/utils/logging.hpp"
+#include "modloader/shared/modloader.hpp"
+#include "beatsaber-hook/shared/utils/typedefs.h"
+#include "beatsaber-hook/shared/utils/hooking.hpp"
+#include "beatsaber-hook/shared/utils/il2cpp-utils.hpp"
+#include "beatsaber-hook/shared/utils/il2cpp-functions.hpp"
+#include "beatsaber-hook/shared/config/rapidjson-utils.hpp"
+#include "beatsaber-hook/shared/config/config-utils.hpp"
 #include "../extern/questui/shared/QuestUI.hpp"
 #include "../extern/questui/shared/BeatSaberUI.hpp"
 #include "../extern/custom-types/shared/register.hpp"
@@ -97,7 +96,7 @@ bool gotTimes;
 
 static void SaveConfig() {
     if (!getConfig().config.HasMember("Are Outro Skips Enabled")) {
-        log("Regenerating config!");
+        // log("Regenerating config!");
         getConfig().config.SetObject();
         auto& allocator = getConfig().config.GetAllocator();
         getConfig().config.AddMember("Text X Offset", 0.0, allocator);
@@ -113,31 +112,31 @@ static void SaveConfig() {
         getConfig().config.AddMember("Are Intro Skips Enabled", true, allocator);
         getConfig().config.AddMember("Are Outro Skips Enabled", true, allocator);
         getConfig().Write();
-        log("Config regeneration complete!");
+        // log("Config regeneration complete!");
     }
     else {
-        log("Not regnerating config.");
+        // log("Not regnerating config.");
     }
 }
 
 template<class T>
 UnityEngine::GameObject* FindObject(std::string name, bool byParent = true, bool getLastIndex = false) {
-    log("Finding GameObject of name "+name);
+    // log("Finding GameObject of name "+name);
     Array<T>* trs = UnityEngine::Resources::FindObjectsOfTypeAll<T>();
-    log("There are "+std::to_string(trs->Length())+" GameObjects");
+    // log("There are "+std::to_string(trs->Length())+" GameObjects");
     for(int i = 0; i < trs->Length(); i++) {
         if(i != trs->Length()-1 && getLastIndex) continue;
         UnityEngine::GameObject* go = trs->values[i]->get_gameObject();
         if(byParent) {
             go = go->get_transform()->GetParent()->get_gameObject();
         }
-        log(to_utf8(csstrtostr(UnityEngine::Transform::GetName(trs->values[i]))));
+        // log(to_utf8(csstrtostr(UnityEngine::Transform::GetName(trs->values[i]))));
         if(to_utf8(csstrtostr(UnityEngine::Transform::GetName(go))) == name){
-            log("Found GameObject");
+            // log("Found GameObject");
             return go;
         }
     }
-    log("Could not find GameObject");
+    // log("Could not find GameObject");
     return nullptr;
 }
 
@@ -151,17 +150,17 @@ void onNoteSpawn(Il2CppObject* noteData) {
     if(timeToNextNote > minSkipTime && timeToNextNote < songLength && getConfig().config["Are Middle Skips Enabled"].GetBool() && !skipReady) {
         skipReady = true;
         skipTime = songTime + timeToNextNote - timeBeforeNoteToSkipTo;
-        log("Skip is ready, skip time is %f", skipTime);
+        // log("Skip is ready, skip time is %f", skipTime);
     }
 }
 
-MAKE_HOOK_OFFSETLESS(SongUpdate, void, Il2CppObject* self) {
+MAKE_HOOK_FIND_CLASS(SongUpdate, "", "AudioTimeSyncController", "Update", void, Il2CppObject* self) {
     
     SongUpdate(self);
 
     if(!gotTimes) {
         float startTime = *GetFieldValue<float>(self, "_startSongTime");
-        log("Start time is %f", startTime);
+        // log("Start time is %f", startTime);
         auto bocc = UnityEngine::Object::FindObjectOfType<GlobalNamespace::BeatmapObjectCallbackController*>();
         auto beatmapLinesData = reinterpret_cast<GlobalNamespace::BeatmapData*>(bocc->initData->beatmapData)->beatmapLinesData;
         for (int i = 0; i < beatmapLinesData->Length(); i++) {
@@ -184,7 +183,7 @@ MAKE_HOOK_OFFSETLESS(SongUpdate, void, Il2CppObject* self) {
                 }
             }
         }
-        log("First note time is %f, last note time is %f", firstNoteTime, lastNoteTime);
+        // log("First note time is %f, last note time is %f", firstNoteTime, lastNoteTime);
         gotTimes = true;
     }
 
@@ -195,13 +194,13 @@ MAKE_HOOK_OFFSETLESS(SongUpdate, void, Il2CppObject* self) {
         if(songTime < firstNoteTime - timeBeforeNoteToSkipTo - 0.5f && firstNoteTime > minSkipTime && getConfig().config["Are Intro Skips Enabled"].GetBool()) {
             skipReady = true;
             skipTime = firstNoteTime - timeBeforeNoteToSkipTo;
-            log("Skip is ready, skip time is %f", skipTime);
+            // log("Skip is ready, skip time is %f", skipTime);
         }
         if(songTime > lastNoteTime && songTime < songLength-2 && getConfig().config["Are Outro Skips Enabled"].GetBool()) {
             skipReady = true;
             skipTime = songLength-2;
             objectCount = 0;
-            log("Skip is ready, skip time is %f", skipTime);
+            // log("Skip is ready, skip time is %f", skipTime);
         }
     }
     if(songTime > skipTime) {
@@ -214,7 +213,7 @@ MAKE_HOOK_OFFSETLESS(SongUpdate, void, Il2CppObject* self) {
     }
 
     if(skipReady && timeHeld+0.05f >= timeToHold && songTime < skipTime - 0.5f && songTime > 0.1f && objectCount == 0) {
-        log("Skipped to %f", skipTime);
+        // log("Skipped to %f", skipTime);
         il2cpp_utils::RunMethod(audioSource, "set_time", skipTime);
 
         skipReady = false;
@@ -229,10 +228,10 @@ MAKE_HOOK_OFFSETLESS(SongUpdate, void, Il2CppObject* self) {
 
         if(scoreText == nullptr && songTime > 0.1f) {
             bool getLastIndex = false;
-            if(FindObject<MultiplayerController*>("MultiplayerController", false) == nullptr) {
-                getLastIndex = true;
-            }
-            log("Get last index is %i", getLastIndex);
+            // if(FindObject<MultiplayerController*>("MultiplayerController", false) == nullptr) {
+            //     getLastIndex = true;
+            // }
+            // log("Get last index is %i", getLastIndex);
             scoreText = QuestUI::BeatSaberUI::CreateText(FindObject<ComboUIController*>("ComboPanel", false, getLastIndex)->get_transform(), text, UnityEngine::Vector2{textX*10, 57+(textY*10)});
             scoreText->set_color(UnityEngine::Color{rgbColors.r, rgbColors.g, rgbColors.b, 1});
             scoreText->set_alignment(TMPro::TextAlignmentOptions::Center);
@@ -251,7 +250,7 @@ MAKE_HOOK_OFFSETLESS(SongUpdate, void, Il2CppObject* self) {
     }
 }
 
-MAKE_HOOK_OFFSETLESS(SongEnd, void, Il2CppObject* self, Il2CppObject* levelCompleteionResults) {
+MAKE_HOOK_FIND_CLASS(SongEnd, "", "StandardLevelScenesTransitionSetupDataSO", "Finish", void, Il2CppObject* self, Il2CppObject* levelCompleteionResults) {
     
     inSong = false;
 
@@ -260,9 +259,9 @@ MAKE_HOOK_OFFSETLESS(SongEnd, void, Il2CppObject* self, Il2CppObject* levelCompl
     SongEnd(self, levelCompleteionResults);
 }
 
-MAKE_HOOK_OFFSETLESS(SongStart, void, Il2CppObject* self) {
+MAKE_HOOK_FIND_CLASS(SongStart, "", "AudioTimeSyncController", "Awake", void, Il2CppObject* self) {
 
-    log("SongStart");
+    // log("SongStart");
 
     firstNoteTime = songLength;
     lastNoteTime = -1;
@@ -284,14 +283,14 @@ MAKE_HOOK_OFFSETLESS(SongStart, void, Il2CppObject* self) {
     SongStart(self);
 }
 
-MAKE_HOOK_OFFSETLESS(Triggers, void, Il2CppObject* self, int node) {
+MAKE_HOOK_FIND_CLASS(Triggers, "", "VRControllersInputManager", "TriggerValue", void, Il2CppObject* self, int node) {
 
     triggerNode = node;
 
     Triggers(self, node);
 }
 
-MAKE_HOOK_OFFSETLESS(ControllerUpdate, void, Il2CppObject* self) {
+MAKE_HOOK_FIND_CLASS(ControllerUpdate, "", "VRController", "Update", void, Il2CppObject* self) {
 
     float trigger = *il2cpp_utils::RunMethod<float>(self, "get_triggerValue");
 
@@ -305,35 +304,35 @@ MAKE_HOOK_OFFSETLESS(ControllerUpdate, void, Il2CppObject* self) {
     ControllerUpdate(self);
 }
 
-MAKE_HOOK_OFFSETLESS(SpawnNote, void, Il2CppObject* self, Il2CppObject* noteData, float cutDirectionAngleOffset) {
+MAKE_HOOK_FIND_CLASS(SpawnNote, "", "BeatmapObjectSpawnController", "SpawnBasicNote", void, Il2CppObject* self, Il2CppObject* noteData, float cutDirectionAngleOffset) {
 
     onNoteSpawn(noteData);
 
     SpawnNote(self, noteData, cutDirectionAngleOffset);
 }
 
-MAKE_HOOK_OFFSETLESS(SpawnBomb, void, Il2CppObject* self, Il2CppObject* noteData) {
+MAKE_HOOK_FIND_CLASS(SpawnBomb, "", "BeatmapObjectSpawnController", "SpawnBombNote", void, Il2CppObject* self, Il2CppObject* noteData) {
 
     onNoteSpawn(noteData);
 
     SpawnBomb(self, noteData);
 }
 
-MAKE_HOOK_OFFSETLESS(NoteCut, void, Il2CppObject* self, Il2CppObject* noteController, Il2CppObject* noteCutInfo) {
+MAKE_HOOK_FIND_CLASS(NoteCut, "", "BeatmapObjectManager", "HandleNoteWasMissed", void, Il2CppObject* self, Il2CppObject* noteController, Il2CppObject* noteCutInfo) {
 
     objectCount--;
 
     NoteCut(self, noteController, noteCutInfo);
 }
 
-MAKE_HOOK_OFFSETLESS(NoteMissed, void, Il2CppObject* self, Il2CppObject* noteController) {
+MAKE_HOOK_FIND_CLASS(NoteMissed, "", "BeatmapObjectManager", "HandleNoteWasCut", void, Il2CppObject* self, Il2CppObject* noteController) {
 
     objectCount--;
 
     NoteMissed(self, noteController);
 }
 
-MAKE_HOOK_OFFSETLESS(GetLength, void, Il2CppObject* self) {
+MAKE_HOOK_FIND_CLASS(GetLength, "", "StandardLevelDetailView", "RefreshContent", void, Il2CppObject* self) {
 
     GetLength(self);
 
@@ -343,18 +342,18 @@ MAKE_HOOK_OFFSETLESS(GetLength, void, Il2CppObject* self) {
     songLength = *il2cpp_utils::RunMethod<float>(audioClip, "get_length");
 }
 
-MAKE_HOOK_OFFSETLESS(PauseStart, void, Il2CppObject* self) {
+MAKE_HOOK_FIND_CLASS(PauseStart, "", "PauseMenuManager", "ShowMenu", void, Il2CppObject* self) {
 
-    log("PauseStart");
+    // log("PauseStart");
 
     PauseStart(self);
 
     inPauseMenu = true;
 }
 
-MAKE_HOOK_OFFSETLESS(PauseAnimationFinish, void, Il2CppObject* self) {
+MAKE_HOOK_FIND_CLASS(PauseAnimationFinish, "", "PauseController", "HandlePauseMenuManagerDidFinishResumeAnimation", void, Il2CppObject* self) {
 
-    log("PauseAnimationFinish");
+    // log("PauseAnimationFinish");
 
     PauseAnimationFinish(self);
 
@@ -385,21 +384,6 @@ extern "C" void setup(ModInfo& info) {
 extern "C" void load() {
     QuestUI::Init();
 
-    custom_types::Register::RegisterType<IntroSkip::UIController>();
+    custom_types::Register::AutoRegister();
     QuestUI::Register::RegisterModSettingsViewController<IntroSkip::UIController*>(modInfo, "IntroSkip");
-
-    log("Installing hooks...");
-    INSTALL_HOOK_OFFSETLESS(logger().get(), SongUpdate, il2cpp_utils::FindMethodUnsafe("", "AudioTimeSyncController", "Update", 0));
-    INSTALL_HOOK_OFFSETLESS(logger().get(), SongStart, il2cpp_utils::FindMethodUnsafe("", "AudioTimeSyncController", "Awake", 0));
-    INSTALL_HOOK_OFFSETLESS(logger().get(), Triggers, il2cpp_utils::FindMethodUnsafe("", "VRControllersInputManager", "TriggerValue", 1));
-    INSTALL_HOOK_OFFSETLESS(logger().get(), ControllerUpdate, il2cpp_utils::FindMethodUnsafe("", "VRController", "Update", 0));
-    INSTALL_HOOK_OFFSETLESS(logger().get(), SpawnNote, il2cpp_utils::FindMethodUnsafe("", "BeatmapObjectSpawnController", "SpawnBasicNote", 2));
-    INSTALL_HOOK_OFFSETLESS(logger().get(), SpawnBomb, il2cpp_utils::FindMethodUnsafe("", "BeatmapObjectSpawnController", "SpawnBombNote", 1));
-    INSTALL_HOOK_OFFSETLESS(logger().get(), NoteMissed, il2cpp_utils::FindMethodUnsafe("", "BeatmapObjectManager", "HandleNoteWasMissed", 1));
-    INSTALL_HOOK_OFFSETLESS(logger().get(), NoteCut, il2cpp_utils::FindMethodUnsafe("", "BeatmapObjectManager", "HandleNoteWasCut", 2));
-    INSTALL_HOOK_OFFSETLESS(logger().get(), SongEnd, il2cpp_utils::FindMethodUnsafe("", "StandardLevelScenesTransitionSetupDataSO", "Finish", 1));
-    INSTALL_HOOK_OFFSETLESS(logger().get(), GetLength, il2cpp_utils::FindMethodUnsafe("", "StandardLevelDetailView", "RefreshContent", 0));
-    INSTALL_HOOK_OFFSETLESS(logger().get(), PauseStart, il2cpp_utils::FindMethodUnsafe("", "PauseMenuManager", "ShowMenu", 0));
-    INSTALL_HOOK_OFFSETLESS(logger().get(), PauseAnimationFinish, il2cpp_utils::FindMethodUnsafe("", "PauseController", "HandlePauseMenuManagerDidFinishResumeAnimation", 0));
-    log("Installed all hooks!");
 }
