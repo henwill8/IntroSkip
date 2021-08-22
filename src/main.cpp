@@ -96,7 +96,7 @@ bool gotTimes;
 
 static void SaveConfig() {
     if (!getConfig().config.HasMember("Are Outro Skips Enabled")) {
-        // log("Regenerating config!");
+        log("Regenerating config!");
         getConfig().config.SetObject();
         auto& allocator = getConfig().config.GetAllocator();
         getConfig().config.AddMember("Text X Offset", 0.0, allocator);
@@ -112,10 +112,10 @@ static void SaveConfig() {
         getConfig().config.AddMember("Are Intro Skips Enabled", true, allocator);
         getConfig().config.AddMember("Are Outro Skips Enabled", true, allocator);
         getConfig().Write();
-        // log("Config regeneration complete!");
+        log("Config regeneration complete!");
     }
     else {
-        // log("Not regnerating config.");
+        log("Not regnerating config.");
     }
 }
 
@@ -147,20 +147,20 @@ void onNoteSpawn(Il2CppObject* noteData) {
 
     // log("Time to next note is "+std::to_string(timeToNextNote));
 
-    if(timeToNextNote > minSkipTime && timeToNextNote < songLength && getConfig().config["Are Middle Skips Enabled"].GetBool() && !skipReady) {
+    if(timeToNextNote > minSkipTime+timeToHold+1.0f && timeToNextNote < songLength && getConfig().config["Are Middle Skips Enabled"].GetBool() && !skipReady) {
         skipReady = true;
         skipTime = songTime + timeToNextNote - timeBeforeNoteToSkipTo;
-        // log("Skip is ready, skip time is %f", skipTime);
+        log("Skip is ready, skip time is %f", skipTime);
     }
 }
 
-MAKE_HOOK_FIND_CLASS(SongUpdate, "", "AudioTimeSyncController", "Update", void, Il2CppObject* self) {
+MAKE_HOOK_MATCH(SongUpdate, &AudioTimeSyncController::Update, void, AudioTimeSyncController* self) {
     
     SongUpdate(self);
 
     if(!gotTimes) {
         float startTime = *GetFieldValue<float>(self, "_startSongTime");
-        // log("Start time is %f", startTime);
+        log("Start time is %f", startTime);
         auto bocc = UnityEngine::Object::FindObjectOfType<GlobalNamespace::BeatmapObjectCallbackController*>();
         auto beatmapLinesData = reinterpret_cast<GlobalNamespace::BeatmapData*>(bocc->initData->beatmapData)->beatmapLinesData;
         for (int i = 0; i < beatmapLinesData->Length(); i++) {
@@ -183,85 +183,87 @@ MAKE_HOOK_FIND_CLASS(SongUpdate, "", "AudioTimeSyncController", "Update", void, 
                 }
             }
         }
-        // log("First note time is %f, last note time is %f", firstNoteTime, lastNoteTime);
+        log("First note time is %f, last note time is %f", firstNoteTime, lastNoteTime);
         gotTimes = true;
     }
 
-    songTime = *il2cpp_utils::GetFieldValue<float>(self, "_songTime");
-    Il2CppObject* audioSource = *il2cpp_utils::GetFieldValue(self, "_audioSource");
+    if(inSong) {
+        songTime = *il2cpp_utils::GetFieldValue<float>(self, "_songTime");
+        Il2CppObject* audioSource = *il2cpp_utils::GetFieldValue(self, "_audioSource");
 
-    if(!skipReady) {
-        if(songTime < firstNoteTime - timeBeforeNoteToSkipTo - 0.5f && firstNoteTime > minSkipTime && getConfig().config["Are Intro Skips Enabled"].GetBool()) {
-            skipReady = true;
-            skipTime = firstNoteTime - timeBeforeNoteToSkipTo;
-            // log("Skip is ready, skip time is %f", skipTime);
-        }
-        if(songTime > lastNoteTime && songTime < songLength-2 && getConfig().config["Are Outro Skips Enabled"].GetBool()) {
-            skipReady = true;
-            skipTime = songLength-2;
-            objectCount = 0;
-            // log("Skip is ready, skip time is %f", skipTime);
-        }
-    }
-    if(songTime > skipTime) {
-        skipReady = false;
-    }
-    if(rTriggerVal > 0.8 && lTriggerVal > 0.8 && objectCount == 0 && !inPauseMenu) {
-        timeHeld += UnityEngine::Time::get_deltaTime();
-    } else {
-        timeHeld = 0;
-    }
-
-    if(skipReady && timeHeld+0.05f >= timeToHold && songTime < skipTime - 0.5f && songTime > 0.1f && objectCount == 0) {
-        // log("Skipped to %f", skipTime);
-        il2cpp_utils::RunMethod(audioSource, "set_time", skipTime);
-
-        skipReady = false;
-        timeHeld = 0;
-    }
-    
-    if(skipReady && inSong && objectCount == 0) {
-        std::string tempString = std::to_string(timeToHold - timeHeld);
-        tempString.erase(3, tempString.length()-1);
-
-        std::string text = "Hold triggers to skip";
-
-        if(scoreText == nullptr && songTime > 0.1f) {
-            bool getLastIndex = false;
-            // if(FindObject<MultiplayerController*>("MultiplayerController", false) == nullptr) {
-            //     getLastIndex = true;
-            // }
-            // log("Get last index is %i", getLastIndex);
-            scoreText = QuestUI::BeatSaberUI::CreateText(FindObject<ComboUIController*>("ComboPanel", false, getLastIndex)->get_transform(), text, UnityEngine::Vector2{textX*10, 57+(textY*10)});
-            scoreText->set_color(UnityEngine::Color{rgbColors.r, rgbColors.g, rgbColors.b, 1});
-            scoreText->set_alignment(TMPro::TextAlignmentOptions::Center);
-            scoreText->set_fontSize(textSize);
-            scoreText->set_lineSpacing(-30);
-        } else {
-            if(scoreText != nullptr) {
-                scoreText->get_gameObject()->SetActive(true);
-                scoreText->SetText(createcsstr(text));
+        if(!skipReady) {
+            if(songTime < firstNoteTime - timeBeforeNoteToSkipTo - timeToHold - 1.0f && firstNoteTime > minSkipTime && getConfig().config["Are Intro Skips Enabled"].GetBool()) {
+                skipReady = true;
+                skipTime = firstNoteTime - timeBeforeNoteToSkipTo;
+                log("Skip is ready, skip time is %f", skipTime);
+            }
+            if(songTime > lastNoteTime && songTime < songLength-2 && getConfig().config["Are Outro Skips Enabled"].GetBool()) {
+                skipReady = true;
+                skipTime = songLength-2;
+                objectCount = 0;
+                log("Skip is ready, skip time is %f", skipTime);
             }
         }
-    } else {
-        if(scoreText != nullptr) {
-            scoreText->get_gameObject()->SetActive(false);
+        if(songTime+1.0f > skipTime) {
+            skipReady = false;
+        }
+        if(rTriggerVal > 0.8 && lTriggerVal > 0.8 && objectCount == 0 && !inPauseMenu) {
+            timeHeld += UnityEngine::Time::get_deltaTime();
+        } else {
+            timeHeld = 0;
+        }
+
+        if(skipReady && timeHeld+0.05f >= timeToHold && songTime < skipTime - 0.5f && songTime > 0.1f && objectCount == 0) {
+            log("Skipped to %f", skipTime);
+            il2cpp_utils::RunMethod(audioSource, "set_time", skipTime);
+
+            skipReady = false;
+            timeHeld = 0;
+        }
+        
+        if(skipReady && inSong && objectCount == 0) {
+            std::string tempString = std::to_string(timeToHold - timeHeld);
+            tempString.erase(3, tempString.length()-1);
+
+            std::string text = "Hold triggers to skip";
+
+            if(scoreText == nullptr && songTime > 0.1f) {
+                bool getLastIndex = false;
+                // if(FindObject<MultiplayerController*>("MultiplayerController", false) == nullptr) {
+                //     getLastIndex = true;
+                // }
+                // log("Get last index is %i", getLastIndex);
+                scoreText = QuestUI::BeatSaberUI::CreateText(FindObject<ComboUIController*>("ComboPanel", false, getLastIndex)->get_transform(), text, UnityEngine::Vector2{textX*10, 57+(textY*10)});
+                scoreText->set_color(UnityEngine::Color{rgbColors.r, rgbColors.g, rgbColors.b, 1});
+                scoreText->set_alignment(TMPro::TextAlignmentOptions::Center);
+                scoreText->set_fontSize(textSize);
+                scoreText->set_lineSpacing(-30);
+            } else {
+                if(scoreText != nullptr) {
+                    scoreText->get_gameObject()->SetActive(true);
+                    scoreText->SetText(createcsstr(text));
+                }
+            }
+        } else {
+            if(scoreText != nullptr) {
+                scoreText->get_gameObject()->SetActive(false);
+            }
         }
     }
 }
 
-MAKE_HOOK_FIND_CLASS(SongEnd, "", "StandardLevelScenesTransitionSetupDataSO", "Finish", void, Il2CppObject* self, Il2CppObject* levelCompleteionResults) {
+MAKE_HOOK_MATCH(SongEnd, &StandardLevelScenesTransitionSetupDataSO::Finish, void, StandardLevelScenesTransitionSetupDataSO* self, LevelCompletionResults* levelCompletionResults) {
     
     inSong = false;
 
     objectCount = 0;
     
-    SongEnd(self, levelCompleteionResults);
+    SongEnd(self, levelCompletionResults);
 }
 
-MAKE_HOOK_FIND_CLASS(SongStart, "", "AudioTimeSyncController", "Awake", void, Il2CppObject* self) {
+MAKE_HOOK_MATCH(SongStart, &AudioTimeSyncController::StartSong, void, AudioTimeSyncController* self, float startTimeOffset) {
 
-    // log("SongStart");
+    log("SongStart");
 
     firstNoteTime = songLength;
     lastNoteTime = -1;
@@ -280,17 +282,17 @@ MAKE_HOOK_FIND_CLASS(SongStart, "", "AudioTimeSyncController", "Awake", void, Il
     textSize = getConfig().config["Text Size"].GetInt();
     rgbColors = {clamp(getConfig().config["Red Color"].GetFloat(), 0.0f, 255.0f), clamp(getConfig().config["Green Color"].GetFloat(), 0.0f, 255.0f), clamp(getConfig().config["Blue Color"].GetFloat(), 0.0f, 255.0f)};
 
-    SongStart(self);
+    SongStart(self, startTimeOffset);
 }
 
-MAKE_HOOK_FIND_CLASS(Triggers, "", "VRControllersInputManager", "TriggerValue", void, Il2CppObject* self, int node) {
+MAKE_HOOK_MATCH(Triggers, &VRControllersInputManager::TriggerValue, float, VRControllersInputManager* self, UnityEngine::XR::XRNode node) {
 
-    triggerNode = node;
+    triggerNode = (int)node;
 
-    Triggers(self, node);
+    return Triggers(self, node);
 }
 
-MAKE_HOOK_FIND_CLASS(ControllerUpdate, "", "VRController", "Update", void, Il2CppObject* self) {
+MAKE_HOOK_MATCH(ControllerUpdate, &VRController::Update, void, VRController* self) {
 
     float trigger = *il2cpp_utils::RunMethod<float>(self, "get_triggerValue");
 
@@ -304,35 +306,35 @@ MAKE_HOOK_FIND_CLASS(ControllerUpdate, "", "VRController", "Update", void, Il2Cp
     ControllerUpdate(self);
 }
 
-MAKE_HOOK_FIND_CLASS(SpawnNote, "", "BeatmapObjectSpawnController", "SpawnBasicNote", void, Il2CppObject* self, Il2CppObject* noteData, float cutDirectionAngleOffset) {
+MAKE_HOOK_MATCH(SpawnNote, &BeatmapObjectSpawnController::SpawnBasicNote, void, BeatmapObjectSpawnController* self, NoteData* noteData, float cutDirectionAngleOffset) {
 
     onNoteSpawn(noteData);
 
     SpawnNote(self, noteData, cutDirectionAngleOffset);
 }
 
-MAKE_HOOK_FIND_CLASS(SpawnBomb, "", "BeatmapObjectSpawnController", "SpawnBombNote", void, Il2CppObject* self, Il2CppObject* noteData) {
+MAKE_HOOK_MATCH(SpawnBomb, &BeatmapObjectSpawnController::SpawnBombNote, void, BeatmapObjectSpawnController* self, NoteData* noteData) {
 
     onNoteSpawn(noteData);
 
     SpawnBomb(self, noteData);
 }
 
-MAKE_HOOK_FIND_CLASS(NoteCut, "", "BeatmapObjectManager", "HandleNoteWasMissed", void, Il2CppObject* self, Il2CppObject* noteController, Il2CppObject* noteCutInfo) {
+MAKE_HOOK_MATCH(NoteController_SendNoteWasCutEvent, &NoteController::SendNoteWasCutEvent, void, NoteController* self, ByRef<NoteCutInfo> noteCutInfo) {
 
     objectCount--;
 
-    NoteCut(self, noteController, noteCutInfo);
+    NoteController_SendNoteWasCutEvent(self, noteCutInfo);
 }
 
-MAKE_HOOK_FIND_CLASS(NoteMissed, "", "BeatmapObjectManager", "HandleNoteWasCut", void, Il2CppObject* self, Il2CppObject* noteController) {
+MAKE_HOOK_MATCH(NoteMissed, &BeatmapObjectManager::HandleNoteControllerNoteWasMissed, void, BeatmapObjectManager* self, NoteController* noteController) {
 
     objectCount--;
 
     NoteMissed(self, noteController);
 }
 
-MAKE_HOOK_FIND_CLASS(GetLength, "", "StandardLevelDetailView", "RefreshContent", void, Il2CppObject* self) {
+MAKE_HOOK_MATCH(GetLength, &StandardLevelDetailView::RefreshContent, void, StandardLevelDetailView* self) {
 
     GetLength(self);
 
@@ -342,18 +344,18 @@ MAKE_HOOK_FIND_CLASS(GetLength, "", "StandardLevelDetailView", "RefreshContent",
     songLength = *il2cpp_utils::RunMethod<float>(audioClip, "get_length");
 }
 
-MAKE_HOOK_FIND_CLASS(PauseStart, "", "PauseMenuManager", "ShowMenu", void, Il2CppObject* self) {
+MAKE_HOOK_MATCH(PauseStart, &PauseMenuManager::ShowMenu, void, PauseMenuManager* self) {
 
-    // log("PauseStart");
+    log("PauseStart");
 
     PauseStart(self);
 
     inPauseMenu = true;
 }
 
-MAKE_HOOK_FIND_CLASS(PauseAnimationFinish, "", "PauseController", "HandlePauseMenuManagerDidFinishResumeAnimation", void, Il2CppObject* self) {
+MAKE_HOOK_MATCH(PauseAnimationFinish, &PauseController::HandlePauseMenuManagerDidFinishResumeAnimation, void, PauseController* self) {
 
-    // log("PauseAnimationFinish");
+    log("PauseAnimationFinish");
 
     PauseAnimationFinish(self);
 
@@ -386,4 +388,17 @@ extern "C" void load() {
 
     custom_types::Register::AutoRegister();
     QuestUI::Register::RegisterModSettingsViewController<IntroSkip::UIController*>(modInfo, "IntroSkip");
+    
+    INSTALL_HOOK(logger().get(), SongStart);
+    INSTALL_HOOK(logger().get(), SongUpdate);
+    INSTALL_HOOK(logger().get(), SongEnd);
+    INSTALL_HOOK(logger().get(), Triggers);
+    INSTALL_HOOK(logger().get(), ControllerUpdate);
+    INSTALL_HOOK(logger().get(), SpawnNote);
+    INSTALL_HOOK(logger().get(), SpawnBomb);
+    INSTALL_HOOK(logger().get(), NoteController_SendNoteWasCutEvent);
+    INSTALL_HOOK(logger().get(), NoteMissed);
+    INSTALL_HOOK(logger().get(), GetLength);
+    INSTALL_HOOK(logger().get(), PauseStart);
+    INSTALL_HOOK(logger().get(), PauseAnimationFinish);
 }

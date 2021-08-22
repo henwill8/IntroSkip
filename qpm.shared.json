@@ -38,7 +38,7 @@
           ]
         }
       },
-      "version": "2.2.4"
+      "version": "2.2.5"
     },
     {
       "dependency": {
@@ -62,7 +62,7 @@
         "versionRange": "*",
         "additionalData": {}
       },
-      "version": "0.10.1"
+      "version": "0.10.2"
     },
     {
       "dependency": {
@@ -74,23 +74,19 @@
     },
     {
       "dependency": {
-        "id": "custom-types",
-        "versionRange": "^0.12.5",
+        "id": "beatsaber-hook",
+        "versionRange": "^2.0.0",
         "additionalData": {}
       },
-      "version": "0.12.5"
+      "version": "2.2.4"
     },
     {
       "dependency": {
-        "id": "beatsaber-hook",
-        "versionRange": "^2.0.0",
-        "additionalData": {
-          "extraFiles": [
-            "src/inline-hook"
-          ]
-        }
+        "id": "custom-types",
+        "versionRange": "^0.12.6",
+        "additionalData": {}
       },
-      "version": "2.2.1"
+      "version": "0.12.6"
     }
   ]
 }
