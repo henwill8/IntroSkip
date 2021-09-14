@@ -364,7 +364,7 @@ MAKE_HOOK_MATCH(PauseAnimationFinish, &PauseController::HandlePauseMenuManagerDi
 
 extern "C" void setup(ModInfo& info) {
     info.id = "IntroSkip";
-    info.version = "0.2.0";
+    info.version = "0.3.2";
     modInfo = info;
     // Create logger
     // static std::unique_ptr<const Logger> ptr(new Logger(info));
